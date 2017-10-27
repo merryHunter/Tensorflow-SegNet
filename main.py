@@ -17,6 +17,7 @@ tf.app.flags.DEFINE_integer('image_w', "480", """ image width """)
 tf.app.flags.DEFINE_integer('image_c', "3", """ image channel (RGB) """)
 tf.app.flags.DEFINE_integer('num_class', "11", """ total class number """)
 tf.app.flags.DEFINE_boolean('save_image', True, """ whether to save predicted image """)
+tf.app.flags.DEFINE_float('gpu', "1.0", """ GPU usage: 0...1.0 """)
 
 def checkArgs():
     if FLAGS.testing != '':

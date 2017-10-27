@@ -94,8 +94,8 @@ def get_filename_list(path):
   filenames = []
   for i in fd:
     i = i.strip().split(" ")
-    image_filenames.append(i[0])
-    label_filenames.append(i[1])
+    image_filenames.append('../' + i[0])
+    label_filenames.append('../' + i[1])
   return image_filenames, label_filenames
 
 def CamVidInputs(image_filenames, label_filenames, batch_size):
@@ -115,6 +115,7 @@ def CamVidInputs(image_filenames, label_filenames, batch_size):
          'This will take a few minutes.' % min_queue_examples)
 
   # Generate a batch of images and labels by building up a queue of examples.
+#  print(image_filenames)
   return _generate_image_and_label_batch(reshaped_image, label,
                                          min_queue_examples, batch_size,
                                          shuffle=True)

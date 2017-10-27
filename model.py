@@ -16,7 +16,7 @@ from Inputs import *
 
 
 
-""" legacy code for tf bug in missing gradient with max_pool_argmax """
+""" legacy code for tf bug in missing gradient with max_pool_argmax 
 @ops.RegisterGradient("MaxPoolWithArgmax")
 def _MaxPoolWithArgmaxGrad(op, grad, unused_argmax_grad):
   return gen_nn_ops._max_pool_grad(op.inputs[0],
@@ -26,13 +26,13 @@ def _MaxPoolWithArgmaxGrad(op, grad, unused_argmax_grad):
                                    op.get_attr("strides"),
                                    padding=op.get_attr("padding"),
                                    data_format='NHWC')
-
+"""
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
 
-INITIAL_LEARNING_RATE = 0.001      # Initial learning rate.
+INITIAL_LEARNING_RATE = 0.0003      # Initial learning rate.
 EVAL_BATCH_SIZE = 5
 BATCH_SIZE = 5
 # for CamVid
@@ -319,9 +319,9 @@ def test(FLAGS):
 
   saver = tf.train.Saver(variables_to_restore)
 
-  # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.0001)
+  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu)
 
-  with tf.Session() as sess:
+  with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
     # Load checkpoint
     saver.restore(sess, test_ckpt )
 
@@ -365,7 +365,7 @@ def training(FLAGS, is_finetune=False):
 
   image_filenames, label_filenames = get_filename_list(image_dir)
   val_image_filenames, val_label_filenames = get_filename_list(val_dir)
-
+  print(image_filenames)
   with tf.Graph().as_default():
 
     train_data_node = tf.placeholder( tf.float32, shape=[batch_size, image_h, image_w, image_c])
