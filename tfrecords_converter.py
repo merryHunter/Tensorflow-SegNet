@@ -41,18 +41,19 @@ def create_image_sets(path, train, val, test):
             for im, l in df:
                 f.writelines(im + ' ' + l + '\n')
 
+
 def get_filename_pairs(dataset_name, path):
     """
     Returns full path of images and image annotations.
     :param path: dataset folder path
     :return: List of tuples [(img_path1, ann_path1), (img_path2,ann_path2)..]
     """
-    train = None; val = None; test = None
+    train = []; val = []; test = []
+    train_images = []; train_labels = []
     if dataset_name == 'kitti':
         trainpath = os.path.join(path, 'training/')
         testpath = os.path.join(path, 'testing/')
-        train_images = []
-        train_labels = []
+
         for f in os.listdir(os.path.join(trainpath, 'image_2/')):
             train_images.append(os.path.join(trainpath, 'image_2/', f))
 
@@ -77,12 +78,40 @@ def get_filename_pairs(dataset_name, path):
               .format(len(train_images), len(val_images), len(test_images)))
         warnings.warn('KITTI test split don"t contain labels!')
         test = zip(test_images,test_images)
+
+        create_image_sets(path, train, val, test)
+
     elif dataset_name == 'mapillary':
         pass
-
-    create_image_sets(path, train, val, test)
+    elif dataset_name == 'cityscapes':
+        pass
+    elif dataset_name == 'camvid':
+        trainpath = os.path.join(path, 'train/')
+        valpath = os.path.join(path, 'val/')
+        testpath = os.path.join(path, 'test/')
+        with open(os.path.join(path, 'train.txt'), 'r') as f:
+            # It is already written as pair of 'img/path ann/path', but local
+            train_images = [tuple(map(str, i.split(' '))) for i in f]
+            for o, a in train_images:
+                # Transform an overlapping path to united full path of imgs and anns
+                im = path + '/'.join([i for i in o.split('/') if i not in path.split('/')])
+                an = path + '/'.join([i for i in a.split('/') if i not in path.split('/')])
+                train.append(tuple((im.strip(), an.strip())))
+        with open(os.path.join(path, 'val.txt'), 'r') as f:
+            val_images = [tuple(map(str, i.split(' '))) for i in f]
+            for o, a in val_images:
+                im = path + '/'.join([i for i in o.split('/') if i not in path.split('/')])
+                an = path + '/'.join([i for i in a.split('/') if i not in path.split('/')])
+                val.append(tuple((im.strip(), an.strip())))
+        with open(os.path.join(path, 'test.txt'), 'r') as f:
+            test_images = [tuple(map(str, i.split(' '))) for i in f]
+            for o, a in test_images:
+                im = path + '/'.join([i for i in o.split('/') if i not in path.split('/')])
+                an = path + '/'.join([i for i in a.split('/') if i not in path.split('/')])
+                test.append(tuple((im.strip(), an.strip())))
 
     return train, val, test
+
 
 def convert_dataset_to_tfrecord(dataset_name, path):
     """
@@ -131,11 +160,11 @@ def convert_dataset_to_tfrecord(dataset_name, path):
 def main(args):
     if os.path.isdir(FLAGS.kitti_path):
         convert_dataset_to_tfrecord('kitti', FLAGS.kitti_path)
-    if FLAGS.mapillary_path:
+    if os.path.isdir(FLAGS.mapillary_path):
         convert_dataset_to_tfrecord('mapillary', FLAGS.mapillary_path)
-    if FLAGS.mapillary_path:
+    if os.path.isdir(FLAGS.cityscapes_path):
         convert_dataset_to_tfrecord('cityscapes', FLAGS.cityscapes_path)
-    if FLAGS.mapillary_path:
+    if os.path.isdir(FLAGS.camvid_path):
         convert_dataset_to_tfrecord('camvid', FLAGS.camvid_path)
 
 if __name__ == '__main__':
