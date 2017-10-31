@@ -13,7 +13,7 @@ from tensorflow.python.ops import gen_nn_ops
 # modules
 from Utils import _variable_with_weight_decay, _variable_on_cpu, _add_loss_summaries, _activation_summary, print_hist_summery, get_hist, per_class_acc, writeImage
 from Inputs import *
-
+import tfrecord_reader as reader
 
 
 """ legacy code for tf bug in missing gradient with max_pool_argmax 
@@ -298,8 +298,10 @@ def test(FLAGS):
   image_c = FLAGS.image_c
   # testing should set BATCH_SIZE = 1
   batch_size = 1
+  myCamVidInput = reader.DatasetReader(dataset_name='camvid', path_to_tfrecords='tfrecords_datasets/',
+                       img_height=360, img_width=480, annot_dims=1)
 
-  image_filenames, label_filenames = get_filename_list(test_dir)
+#   image_filenames, label_filenames = get_filename_list(test_dir)
 
   test_data_node = tf.placeholder(
         tf.float32,
@@ -325,12 +327,14 @@ def test(FLAGS):
     # Load checkpoint
     saver.restore(sess, test_ckpt )
 
-    images, labels = get_all_test_data(image_filenames, label_filenames)
+#     images, labels = get_all_test_data(image_filenames, label_filenames)
+    images_, labels_ = myCamVidInput.get_images_labels('test')
 
+    n_test_samples = myCamVidInput.getNumberTestTFRecords()
     threads = tf.train.start_queue_runners(sess=sess)
     hist = np.zeros((NUM_CLASSES, NUM_CLASSES))
-    for image_batch, label_batch  in zip(images, labels):
-
+    for _ in range(n_test_samples):
+      image_batch, label_batch = sess.run([images_, labels_])
       feed_dict = {
         test_data_node: image_batch,
         test_labels_node: label_batch,
@@ -363,9 +367,11 @@ def training(FLAGS, is_finetune=False):
   # should be changed if your model stored by different convention
   startstep = 0 if not is_finetune else int(FLAGS.finetune.split('-')[-1])
 
-  image_filenames, label_filenames = get_filename_list(image_dir)
-  val_image_filenames, val_label_filenames = get_filename_list(val_dir)
-  print(image_filenames)
+#   image_filenames, label_filenames = get_filename_list(image_dir)
+#   val_image_filenames, val_label_filenames = get_filename_list(val_dir)
+
+  myCamVidInput = reader.DatasetReader(dataset_name='camvid', path_to_tfrecords='tfrecords_datasets/',
+                       img_height=360, img_width=480, annot_dims=1)
   with tf.Graph().as_default():
 
     train_data_node = tf.placeholder( tf.float32, shape=[batch_size, image_h, image_w, image_c])
@@ -377,10 +383,14 @@ def training(FLAGS, is_finetune=False):
     global_step = tf.Variable(0, trainable=False)
 
     # For CamVid
-    images, labels = CamVidInputs(image_filenames, label_filenames, batch_size)
+#     images, labels = CamVidInputs(image_filenames, label_filenames, batch_size)
 
-    val_images, val_labels = CamVidInputs(val_image_filenames, val_label_filenames, batch_size)
+#     val_images, val_labels = CamVidInputs(val_image_filenames, val_label_filenames, batch_size)
+    
+    images, labels = myCamVidInput.get_images_labels('train', batch_size)
 
+    val_images, val_labels = myCamVidInput.get_images_labels('val', batch_size)
+    
     # Build a Graph that computes the logits predictions from the inference model.
     loss, eval_prediction = inference(train_data_node, train_labels_node, batch_size, phase_train)
 
@@ -391,9 +401,9 @@ def training(FLAGS, is_finetune=False):
 
     summary_op = tf.summary.merge_all()
 
-    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.0001)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu)
 
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
       # Build an initialization operation to run below.
       if (is_finetune == True):
           saver.restore(sess, finetune_ckpt )

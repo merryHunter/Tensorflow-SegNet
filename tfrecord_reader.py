@@ -19,7 +19,7 @@ class DatasetReader:
         self.path_to_tfrecords = path_to_tfrecords
         self.dataset_name = dataset_name
 
-    def _read_and_decode(self, filename_queue):
+    def _read_and_decode(self, split_name, filename_queue, batch_size, min_queue_examples):
         reader = tf.TFRecordReader()
 
         _, serialized_example = reader.read(filename_queue)
@@ -53,6 +53,7 @@ class DatasetReader:
         # resized_annotation = tf.random_crop(annotation, [height, width, 3])
         # image.set_shape([self.img_height, self.img_width, 3])
         # annotation.set_shape([self.img_height, self.img_width, 3])
+        
         resized_image = tf.image.resize_image_with_crop_or_pad(image=image,
                                                                target_height=self.img_height,
                                                                target_width=self.img_width)
@@ -60,13 +61,19 @@ class DatasetReader:
         resized_annotation = tf.image.resize_image_with_crop_or_pad(image=annotation,
                                                                     target_height=self.img_height,
                                                                     target_width=self.img_width)
-
-        images, annotations = tf.train.shuffle_batch([resized_image, resized_annotation],
-                                                     batch_size=2,
-                                                     capacity=30,
-                                                     num_threads=2,
-                                                     min_after_dequeue=10
-                                                     )
+        if split_name != 'test':
+            images, annotations = tf.train.shuffle_batch([resized_image, resized_annotation],
+                                                         batch_size=batch_size,
+                                                         capacity=min_queue_examples + 3 * batch_size,
+                                                         num_threads=1,
+                                                         min_after_dequeue=min_queue_examples
+                                                         )
+        else:
+            images, annotations = tf.train.batch([resized_image, resized_annotation],
+                                                         batch_size=1,
+                                                         capacity=1,
+                                                         num_threads=1,
+                                                         )
 
         return images, annotations
 
@@ -77,9 +84,30 @@ class DatasetReader:
     def generate_image_and_label_batch(self, image, label, min_queue_examples,
                                         batch_size, shuffle):
         pass
+    
+    def get_images_labels(self, split_name, batch_size=5):
+        tfrecords_filename = self.path_to_tfrecords + self.dataset_name + '-' + split_name + '.tfrecords'
+        print(tfrecords_filename)
+        filename_queue = tf.train.string_input_producer(
+            [tfrecords_filename], num_epochs=None)
+        min_fraction_of_examples_in_queue = 0.4
+        NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 367
+        min_queue_examples = 1
+        if split_name != 'test':
+            min_queue_examples = int(NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN *
+                                   min_fraction_of_examples_in_queue)
+            print ('Filling queue with %d CamVid images before starting to train. '
+                 'This will take a few minutes.' % min_queue_examples)
+        return self._read_and_decode(split_name, filename_queue, batch_size, min_queue_examples)
 
-
-
+    
+    def getNumberTestTFRecords(self):
+        """ Count number of records in test TFRecord of self.dataset. """
+        return sum(1 for _ in tf.python_io.tf_record_iterator(self.path_to_tfrecords
+                                                              + self.dataset_name + '-test.tfrecords'))
+    
+    
+    
     def demo(self):
         # tfrecords_filename = 'output/kitti-train.tfrecords'
         # tfrecords_filename = 'output/kitti-test.tfrecords'
@@ -137,8 +165,8 @@ class DatasetReader:
             coord.join(threads)
 
 
-reader = DatasetReader(dataset_name='kitti', path_to_tfrecords='output/kitti-train.tfrecords',
-        img_height=375, img_width=1242, annot_dims=3)
+# reader = DatasetReader(dataset_name='kitti', path_to_tfrecords='output/kitti-train.tfrecords',
+#         img_height=375, img_width=1242, annot_dims=3)
 # reader = DatasetReader(dataset_name='camvid', path_to_tfrecords='output/camvid-train.tfrecords',
 #                        img_height=360, img_width=480, annot_dims=1)
-reader.demo()
+# reader.demo()

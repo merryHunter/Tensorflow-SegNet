@@ -6,6 +6,7 @@
     into TFRecords.
 
     TODO: add requirements.txt
+    TODO: add ok messages for datasets
 """
 import numpy as np
 import skimage.io as io
@@ -23,7 +24,7 @@ tf.app.flags.DEFINE_string('kitti_path','', 'full path to kitti lane folder')
 tf.app.flags.DEFINE_string('cityscapes_path','', 'full path to cityscapes folder')
 tf.app.flags.DEFINE_string('camvid_path','', 'full path to CamVid folder')
 tf.app.flags.DEFINE_string('mapillary_path','', 'full path to mapillary folder')
-tf.app.flags.DEFINE_string('output','tfrecords_datasets', 'output folder')
+tf.app.flags.DEFINE_string('output','tfrecords_datasets/', 'output folder')
 
 
 def _bytes_feature(value):

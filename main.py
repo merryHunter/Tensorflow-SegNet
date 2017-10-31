@@ -17,7 +17,9 @@ tf.app.flags.DEFINE_integer('image_w', "480", """ image width """)
 tf.app.flags.DEFINE_integer('image_c', "3", """ image channel (RGB) """)
 tf.app.flags.DEFINE_integer('num_class', "11", """ total class number """)
 tf.app.flags.DEFINE_boolean('save_image', True, """ whether to save predicted image """)
-tf.app.flags.DEFINE_float('gpu', "1.0", """ GPU usage: 0...1.0 """)
+tf.app.flags.DEFINE_float('gpu', "0.6", """ GPU usage: 0...1.0 """)
+tf.app.flags.DEFINE_string('tfrecords_dir', "tfrecords_datasets", """ folder containing tfrecords produced by tfrecords_converter.py """)
+tf.app.flags.DEFINE_string('dataset', "camvid", """ name of the dataset you want to play with. You should produce TFRecords into tfrecords_datasets folder before running this command!  """)
 
 def checkArgs():
     if FLAGS.testing != '':
