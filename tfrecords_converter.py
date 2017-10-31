@@ -34,21 +34,31 @@ def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
+def create_image_sets(path, train, val, test):
+    for image_set in ['train', 'val', 'test']:
+        df = eval(image_set)
+        with open(os.path.join(path, image_set + '.txt'), 'w') as f:
+            for im, l in df:
+                f.writelines(im + ' ' + l + '\n')
+
 def get_filename_pairs(dataset_name, path):
     """
     Returns full path of images and image annotations.
     :param path: dataset folder path
     :return: List of tuples [(img_path1, ann_path1), (img_path2,ann_path2)..]
     """
-    train = None; val = None; test = None;
+    train = None; val = None; test = None
     if dataset_name == 'kitti':
         trainpath = os.path.join(path, 'training/')
         testpath = os.path.join(path, 'testing/')
+        train_images = []
+        train_labels = []
+        for f in os.listdir(os.path.join(trainpath, 'image_2/')):
+            train_images.append(os.path.join(trainpath, 'image_2/', f))
 
-        train_images = [ os.path.join(trainpath, 'image_2/', f )
-                         for f in os.listdir(os.path.join(trainpath, 'image_2/'))]
-        train_labels = [ os.path.join(trainpath, 'gt_image_2/', f )
-                          for f in os.listdir(os.path.join(trainpath, 'gt_image_2/'))]
+            fsplit = f.split('_')
+            train_labels.append(os.path.join(trainpath, 'gt_image_2/',
+                                             fsplit[0] + '_road_' + fsplit[1]))
 
         # Hold out 10% for validation
         val_images = train_images[int(len(train_images) * .9):]
@@ -59,13 +69,19 @@ def get_filename_pairs(dataset_name, path):
 
         train = zip(train_images, train_labels)
         val = zip(val_images, val_labels)
-        print('KITTI train, val images and labels loaded.')
         test_images = [os.path.join(testpath, 'image_2/',f)
                        for f in os.listdir(os.path.join(testpath, 'image_2/'))]
+
+        print('KITTI train, val images and labels loaded.')
+        print("Train: {0}\nVal: {1}\nTest:{2}\n"
+              .format(len(train_images), len(val_images), len(test_images)))
         warnings.warn('KITTI test split don"t contain labels!')
         test = zip(test_images,test_images)
     elif dataset_name == 'mapillary':
         pass
+
+    create_image_sets(path, train, val, test)
+
     return train, val, test
 
 def convert_dataset_to_tfrecord(dataset_name, path):
